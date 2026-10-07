@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-# Configuração da página móvel
+# Configuração da página para celular
 st.set_page_config(
     page_title="DiagMina AI",
     page_icon="🚜",
@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilização do aplicativo
+# Estilização visual
 st.markdown("""
     <style>
     .stApp { background-color: #0b1329; color: #f8fafc; }
@@ -53,8 +53,8 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base de dados de manutenção..."):
             try:
-                # URL oficial corrigida com gemini-1.5-flash-latest
-                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+                # Lista de modelos por ordem de preferência
+                modelos = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
                 
                 headers = {
                     "Content-Type": "application/json",
@@ -84,14 +84,21 @@ if submitted:
                     }]
                 }
                 
-                response = requests.post(url, json=payload, headers=headers, timeout=30)
-                res_data = response.json()
+                sucesso = False
+                for modelo in modelos:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
+                    response = requests.post(url, json=payload, headers=headers, timeout=20)
+                    
+                    if response.status_code == 200:
+                        res_data = response.json()
+                        resultado_texto = res_data['candidates'][0]['content']['parts'][0]['text']
+                        st.success("✅ Diagnóstico Encontrado!")
+                        st.markdown(resultado_texto)
+                        sucesso = True
+                        break
                 
-                if response.status_code == 200:
-                    resultado_texto = res_data['candidates'][0]['content']['parts'][0]['text']
-                    st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(resultado_texto)
-                else:
+                if not sucesso:
+                    res_data = response.json()
                     erro_msg = res_data.get('error', {}).get('message', 'Erro na requisição')
                     st.error(f"Erro na API ({response.status_code}): {erro_msg}")
                     
