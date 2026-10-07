@@ -1,0 +1,1 @@
+# diagmina-app
