@@ -1,7 +1,8 @@
 import streamlit as st
-from google import genai
+import requests
+import json
 
-# Configuração da página móvel
+# Configuração da página para celular
 st.set_page_config(
     page_title="DiagMina AI",
     page_icon="🚜",
@@ -9,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilização visual para celular
+# Estilização do app
 st.markdown("""
     <style>
     .stApp { background-color: #0b1329; color: #f8fafc; }
@@ -35,29 +36,29 @@ st.markdown("""
 st.title("🚜 DiagMina AI")
 st.caption("⚡ Assistente Técnico de Tecnologia de Mina")
 
-# Obter a API Key salva nos Secrets do Streamlit
-api_key = st.secrets.get("GEMINI_API_KEY", "")
+# Leitura da chave do Secrets
+api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
     tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1029, PF-4502...").strip().upper()
-    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: TRIGGER DA CÂMERA INVERTIDO...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Câmera traseira com imagem invertida...", height=100)
+    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX TRAVADO...").strip().upper()
+    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não é possível realizar ações no PTX...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
 
 if submitted:
     if not sintoma and not codigo_erro:
         st.warning("⚠️ Preencha o código do erro ou a descrição da falha.")
     elif not api_key:
-        st.error("❌ Chave GEMINI_API_KEY não configurada nos Secrets do Streamlit.")
+        st.error("❌ Chave GEMINI_API_KEY não configurada nos Secrets.")
     else:
         with st.spinner("🔎 Consultando base de dados de manutenção..."):
             try:
-                # Inicialização do cliente oficial Gemini API
-                client = genai.Client(api_key=api_key)
+                # Endpoint REST direto do Gemini 1.5 Flash
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                 
-                prompt = f"""
-                Você é um especialista em manutenção de Tecnologia de Mina (Dispatch, Provision, Câmeras, GPS, Rajant).
+                prompt_text = f"""
+                Você é um especialista em manutenção de Tecnologia de Mina (Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
                 
                 DADOS DA OCORRÊNCIA:
                 - TAG / Equipamento: {tag if tag else 'Não informada'}
@@ -65,18 +66,29 @@ if submitted:
                 - Sintoma / Falha Relatada: {sintoma}
                 
                 INSTRUÇÕES DE RESPOSTA:
-                1. Indique a CAUSA RAIZ provável com base nos procedimentos de manutenção em campo.
-                2. Se a falha envolver "TRIGGER DA CÂMERA INVERTIDO" ou "Câmera traseira invertida", oriente expressamente o procedimento de reconfiguração do display / parâmetro de inversão de sinal de disparo e validação de montagem.
-                3. Forneça o CHECKLIST PASSO A PASSO para teste e resolução rápida em campo.
+                1. Indique a CAUSA RAIZ provável.
+                2. Forneça o CHECKLIST PASSO A PASSO para ação imediata do técnico em campo (ex: ressincronização, reboot, validação de chicote/borne de alimentação ou limpeza de arquivos temporários).
                 """
                 
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt
-                )
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": prompt_text}]
+                    }]
+                }
                 
-                st.success("✅ Diagnóstico Encontrado!")
-                st.markdown(response.text)
+                headers = {'Content-Type': 'json'}
                 
+                # Chamada REST direta aceita chaves com prefixo AQ
+                response = requests.post(url, json=payload, timeout=30)
+                res_data = response.json()
+                
+                if response.status_code == 200:
+                    resultado_texto = res_data['candidates'][0]['content']['parts'][0]['text']
+                    st.success("✅ Diagnóstico Encontrado!")
+                    st.markdown(resultado_texto)
+                else:
+                    erro_msg = res_data.get('error', {}).get('message', 'Erro desconhecido')
+                    st.error(f"Erro na API ({response.status_code}): {erro_msg}")
+                    
             except Exception as e:
                 st.error(f"Erro ao consultar o modelo: {e}")
