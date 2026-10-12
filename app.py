@@ -56,7 +56,6 @@ if submitted:
                 # Inicializa o cliente oficial do SDK Gemini
                 client = genai.Client(api_key=api_key)
                 
-                # Contexto especializado em Tecnologia de Mina (baseado nos manuais e relatórios)
                 prompt = f"""
                 Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
                 
@@ -70,9 +69,9 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: inspeção de chicotes, procedimento de reboot/reset físico, ressincronização com o Dispatch).
                 """
                 
-                # Chamada utilizando o modelo flash recomendado
+                # Atualizado para o modelo gemini-3.8-flash recomendado pela API
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     contents=prompt,
                 )
                 
