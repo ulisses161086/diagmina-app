@@ -36,15 +36,15 @@ st.markdown("""
 st.title("🚜 DiagMina AI")
 st.caption("⚡ Assistente Técnico de Manutenção - Tecnologia de Mina")
 
-# Leitura das chaves nos Secrets (suporta uma chave única ou lista separada por vírgulas)
+# Leitura das chaves nos Secrets (suporta chaves separadas por vírgula)
 raw_keys = st.secrets.get("GEMINI_API_KEY", "")
 api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
     tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1005...").strip().upper()
-    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha de comunicação entre rádio e PTX...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: PTX off-line e rádio Rajant online...", height=100)
+    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
+    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não mostra a rota no mapa...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
 
 if submitted:
@@ -64,8 +64,8 @@ if submitted:
                 - Sintoma / Falha Relatada: {sintoma}
                 
                 DIRETRIZES DE RESPOSTA (Seja direto, técnico e focado em campo):
-                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de enlace de rádio Rajant, falha na porta Ethernet do PTX, queda de alimentação 24V).
-                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pings no rádio, reboot físico do PTX, checagem de cabos UTP/conectores RJ45).
+                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de sinal GPS, falha no serviço Mine Compass/PTX, arquivo de rota ausente).
+                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: reboot do PTX, sincronização manual de mapas/rotas, verificação de antenas).
                 """
                 
                 payload = {
@@ -78,9 +78,9 @@ if submitted:
                 resposta_sucesso = None
                 ultimo_erro = ""
                 
-                # Tenta enviar a requisição alternando entre as chaves disponíveis
+                # Tenta enviar a requisição alternando entre as chaves gratuitas disponíveis
                 for current_key in api_keys:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={current_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={current_key}"
                     response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=25)
                     
                     if response.status_code == 200:
@@ -96,7 +96,7 @@ if submitted:
                     st.success("✅ Diagnóstico Encontrado!")
                     st.markdown(resposta_sucesso)
                 else:
-                    st.error(f"Erro ao consultar o modelo gratuito. Detalhes: {ultimo_erro}")
+                    st.error(f"Erro ao consultar a API. Detalhes: {ultimo_erro}")
                     
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
