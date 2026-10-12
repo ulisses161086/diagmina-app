@@ -40,7 +40,7 @@ api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1043...").strip().upper()
+    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1043...").strip().upper()
     codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
     sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não aparece o mapa no PTX...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
@@ -55,37 +55,41 @@ if submitted:
             try:
                 genai.configure(api_key=api_key)
                 
-                # Descobre automaticamente o primeiro modelo disponível na sua conta que suporte geração de conteúdo
-                modelo_ativo = None
-                for m in genai.list_models():
-                    if 'generateContent' in m.supported_generation_methods:
-                        modelo_ativo = m.name
-                        break
+                prompt = f"""
+                Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
                 
-                if not modelo_ativo:
-                    st.error("Nenhum modelo de IA compatível foi encontrado na sua conta.")
+                DADOS DA OCORRÊNCIA EM CAMPO:
+                - TAG / Equipamento: {tag if tag else 'Não informada'}
+                - Código de Erro / Alarme: {codigo_erro if codigo_erro else 'Não informado'}
+                - Sintoma / Falha Relatada: {sintoma}
+                
+                DIRETRIZES DE RESPOSTA (Seja direto, técnico e focado em campo):
+                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: mau contato em bornes/conectores de alimentação 24V, travamento de aplicação embarcada, perda de sinal de rede Rajant/GPS).
+                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
+                """
+                
+                # Lista de modelos por ordem de prioridade atualizada
+                modelos_tentativa = ['gemini-3.8-flash', 'gemini-1.5-flash']
+                
+                resposta_obtida = None
+                ultimo_erro = None
+                
+                for mod_nome in modelos_tentativa:
+                    try:
+                        model = genai.GenerativeModel(mod_nome)
+                        response = model.generate_content(prompt)
+                        if response and response.text:
+                            resposta_obtida = response.text
+                            break
+                    except Exception as err:
+                        ultimo_erro = err
+                        continue
+                
+                if resposta_obtida:
+                    st.success("✅ Diagnóstico Encontrado!")
+                    st.markdown(resposta_obtida)
                 else:
-                    prompt = f"""
-                    Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
+                    st.error(f"Erro ao consultar os modelos disponíveis: {ultimo_erro}")
                     
-                    DADOS DA OCORRÊNCIA EM CAMPO:
-                    - TAG / Equipamento: {tag if tag else 'Não informada'}
-                    - Código de Erro / Alarme: {codigo_erro if codigo_erro else 'Não informado'}
-                    - Sintoma / Falha Relatada: {sintoma}
-                    
-                    DIRETRIZES DE RESPOSTA (Seja direto, técnico e focado em campo):
-                    1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: mau contato em bornes/conectores de alimentação 24V, travamento de aplicação embarcada, perda de sinal de rede Rajant/GPS).
-                    2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
-                    """
-                    
-                    model = genai.GenerativeModel(modelo_ativo)
-                    response = model.generate_content(prompt)
-                    
-                    if response and response.text:
-                        st.success("✅ Diagnóstico Encontrado!")
-                        st.markdown(response.text)
-                    else:
-                        st.error("A IA não gerou uma resposta válida.")
-                        
             except Exception as e:
-                st.error(f"Erro ao consultar a API: {e}")
+                st.error(f"Erro ao configurar a API: {e}")
