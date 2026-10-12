@@ -53,7 +53,7 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                # Inicializa utilizando a SDK moderna oficial da Google
+                # Inicializa o cliente oficial moderno
                 client = genai.Client(api_key=api_key)
                 
                 prompt = f"""
@@ -69,9 +69,9 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Utiliza o modelo genérico padrão da SDK moderna
+                # Chamada direta utilizando o ID oficial estável atualizado
                 response = client.models.generate_content(
-                    model='gemini-flash',
+                    model='gemini-3.8-flash',
                     contents=prompt,
                 )
                 
