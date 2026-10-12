@@ -1,5 +1,6 @@
 import streamlit as st
 from google import genai
+from google.genai.types import HttpOptions
 
 # Configuração da página para celular
 st.set_page_config(
@@ -40,7 +41,7 @@ api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1029, CA-1043...").strip().upper()
+    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1043...").strip().upper()
     codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
     sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não aparece a rota no mapa...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
@@ -53,7 +54,11 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                client = genai.Client(api_key=api_key)
+                # Força o uso da API estável v1 para evitar erros de rota v1beta
+                client = genai.Client(
+                    api_key=api_key,
+                    http_options=HttpOptions(api_version="v1")
+                )
                 
                 prompt = f"""
                 Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
@@ -68,9 +73,9 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Utiliza o identificador padrão compatível com a SDK moderna
+                # Moddelo estável recomendado pela SDK moderna
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt,
                 )
                 
