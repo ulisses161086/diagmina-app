@@ -40,9 +40,9 @@ api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1043, CA-1029...").strip().upper()
-    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX travado, Câmera invertida...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não é possível realizar ações no PTX...", height=100)
+    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1043...").strip().upper()
+    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX travado...").strip().upper()
+    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não consegue realizar ações no PTX...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
 
 if submitted:
@@ -68,30 +68,29 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: inspeção de chicotes, procedimento de reboot/reset físico, ressincronização com o Dispatch).
                 """
                 
-                # Modelos oficiais válidos
-                modelos_disponiveis = ["gemini-2.5-flash", "gemini-1.5-flash"]
+                # Utiliza o nome de modelo genérico compatível com a SDK nova
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
                 
-                resposta_obtida = None
-                ultimo_erro = None
-                
-                for mod in modelos_disponiveis:
-                    try:
-                        response = client.models.generate_content(
-                            model=mod,
-                            contents=prompt,
-                        )
-                        if response and response.text:
-                            resposta_obtida = response.text
-                            break
-                    except Exception as err:
-                        ultimo_erro = err
-                        continue
-                
-                if resposta_obtida:
+                if response and response.text:
                     st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(resposta_obtida)
+                    st.markdown(response.text)
                 else:
-                    st.error(f"Erro ao consultar os modelos disponíveis. Detalhe: {ultimo_erro}")
+                    st.error("A IA não retornou uma resposta válida.")
                     
             except Exception as e:
-                st.error(f"Erro ao consultar a IA: {e}")
+                # Fallback automático caso o 2.5 falhe, utilizando o modelo padrão de chat direto da biblioteca
+                try:
+                    response = client.models.generate_content(
+                        model='gemini-1.5-flash',
+                        contents=prompt,
+                    )
+                    if response and response.text:
+                        st.success("✅ Diagnóstico Encontrado!")
+                        st.markdown(response.text)
+                    else:
+                        st.error(f"Erro ao consultar: {e}")
+                except Exception as ex:
+                    st.error(f"Erro de conexão com a API: {ex}")
