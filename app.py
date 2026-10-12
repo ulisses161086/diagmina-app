@@ -42,7 +42,7 @@ with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
     tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1043...").strip().upper()
     codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não aparece o mapa no PTX...", height=100)
+    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não aparece a rota no mapa...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
 
 if submitted:
@@ -53,7 +53,6 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                # Inicializa o cliente oficial moderno
                 client = genai.Client(api_key=api_key)
                 
                 prompt = f"""
@@ -69,17 +68,30 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Chamada direta utilizando o ID oficial estável atualizado
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=prompt,
-                )
+                # Lista de rotação automática de modelos para contornar limites de cota
+                lista_modelos = ['gemini-3.8-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-flash']
                 
-                if response and response.text:
+                resposta_obtida = None
+                ultimo_erro = None
+                
+                for modelo in lista_modelos:
+                    try:
+                        response = client.models.generate_content(
+                            model=modelo,
+                            contents=prompt,
+                        )
+                        if response and response.text:
+                            resposta_obtida = response.text
+                            break
+                    except Exception as err:
+                        ultimo_erro = err
+                        continue
+                
+                if resposta_obtida:
                     st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(response.text)
+                    st.markdown(resposta_obtida)
                 else:
-                    st.error("A IA não gerou uma resposta válida.")
+                    st.error(f"Todas as cotas de modelos disponíveis foram atingidas temporariamente. Detalhe técnico: {ultimo_erro}")
                     
             except Exception as e:
-                st.error(f"Erro ao consultar a API: {e}")
+                st.error(f"Erro de conexão com a API: {e}")
