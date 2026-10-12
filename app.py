@@ -40,7 +40,7 @@ api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1029...").strip().upper()
+    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1043, CA-1029...").strip().upper()
     codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX travado, Câmera invertida...").strip().upper()
     sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não é possível realizar ações no PTX...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
@@ -68,8 +68,8 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: inspeção de chicotes, procedimento de reboot/reset físico, ressincronização com o Dispatch).
                 """
                 
-                # Lista de modelos para tentar em caso de indisponibilidade (alta procura)
-                modelos_disponiveis = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash-exp"]
+                # Modelos oficiais válidos
+                modelos_disponiveis = ["gemini-2.5-flash", "gemini-1.5-flash"]
                 
                 resposta_obtida = None
                 ultimo_erro = None
@@ -91,7 +91,7 @@ if submitted:
                     st.success("✅ Diagnóstico Encontrado!")
                     st.markdown(resposta_obtida)
                 else:
-                    st.error(f"Os servidores estão temporariamente lotados. Tente novamente em instantes. Detalhe: {ultimo_erro}")
+                    st.error(f"Erro ao consultar os modelos disponíveis. Detalhe: {ultimo_erro}")
                     
             except Exception as e:
                 st.error(f"Erro ao consultar a IA: {e}")
