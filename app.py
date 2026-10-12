@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 
 # Configuração da página para celular
 st.set_page_config(
@@ -53,7 +53,8 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                genai.configure(api_key=api_key)
+                # Inicializa utilizando a SDK moderna oficial da Google
+                client = genai.Client(api_key=api_key)
                 
                 prompt = f"""
                 Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
@@ -68,28 +69,17 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Lista de modelos por ordem de prioridade atualizada
-                modelos_tentativa = ['gemini-3.8-flash', 'gemini-1.5-flash']
+                # Utiliza o modelo genérico padrão da SDK moderna
+                response = client.models.generate_content(
+                    model='gemini-flash',
+                    contents=prompt,
+                )
                 
-                resposta_obtida = None
-                ultimo_erro = None
-                
-                for mod_nome in modelos_tentativa:
-                    try:
-                        model = genai.GenerativeModel(mod_nome)
-                        response = model.generate_content(prompt)
-                        if response and response.text:
-                            resposta_obtida = response.text
-                            break
-                    except Exception as err:
-                        ultimo_erro = err
-                        continue
-                
-                if resposta_obtida:
+                if response and response.text:
                     st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(resposta_obtida)
+                    st.markdown(response.text)
                 else:
-                    st.error(f"Erro ao consultar os modelos disponíveis: {ultimo_erro}")
+                    st.error("A IA não gerou uma resposta válida.")
                     
             except Exception as e:
-                st.error(f"Erro ao configurar a API: {e}")
+                st.error(f"Erro ao consultar a API: {e}")
