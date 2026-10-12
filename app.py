@@ -68,30 +68,17 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Lista limpa apenas com os identificadores oficiais atuais
-                lista_modelos = ['gemini-3.8-flash']
+                # Utiliza o modelo gemini-1.5-flash com cota diária robusta
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt,
+                )
                 
-                resposta_obtida = None
-                ultimo_erro = None
-                
-                for modelo in lista_modelos:
-                    try:
-                        response = client.models.generate_content(
-                            model=modelo,
-                            contents=prompt,
-                        )
-                        if response and response.text:
-                            resposta_obtida = response.text
-                            break
-                    except Exception as err:
-                        ultimo_erro = err
-                        continue
-                
-                if resposta_obtida:
+                if response and response.text:
                     st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(resposta_obtida)
+                    st.markdown(response.text)
                 else:
-                    st.error(f"Erro ao consultar o modelo de IA. Detalhe técnico: {ultimo_erro}")
+                    st.error("A IA não gerou uma resposta válida.")
                     
             except Exception as e:
-                st.error(f"Erro de conexão com a API: {e}")
+                st.error(f"Erro ao consultar a API: {e}")
