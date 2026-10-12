@@ -68,7 +68,7 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Utiliza o modelo gemini-1.5-flash com cota diária robusta
+                # Utiliza o identificador padrão compatível com a SDK moderna
                 response = client.models.generate_content(
                     model='gemini-1.5-flash',
                     contents=prompt,
