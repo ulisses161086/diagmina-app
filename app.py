@@ -1,6 +1,6 @@
 import streamlit as st
-from google import genai
-from google.genai.types import HttpOptions
+import requests
+import json
 
 # Configuração da página para celular
 st.set_page_config(
@@ -43,7 +43,7 @@ with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
     tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1043...").strip().upper()
     codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não aparece a rota no mapa...", height=100)
+    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não apresenta rota no mapa...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
 
 if submitted:
@@ -54,13 +54,10 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                # Força o uso da API estável v1 para evitar erros de rota v1beta
-                client = genai.Client(
-                    api_key=api_key,
-                    http_options=HttpOptions(api_version="v1")
-                )
+                # URL oficial da API REST do Gemini usando o modelo flash padrão global
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                 
-                prompt = f"""
+                prompt_texto = f"""
                 Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
                 
                 DADOS DA OCORRÊNCIA EM CAMPO:
@@ -73,17 +70,27 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: verificação de pacotes de mapa no Mine Compass, restart do serviço PTX, inspeção de antenas).
                 """
                 
-                # Moddelo estável recomendado pela SDK moderna
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                )
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": prompt_texto}]
+                    }]
+                }
                 
-                if response and response.text:
-                    st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(response.text)
+                headers = {'Content-Type': 'application/json'}
+                
+                response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=30)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    # Extrai o texto gerado com segurança da resposta JSON
+                    texto_resposta = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    if texto_resposta:
+                        st.success("✅ Diagnóstico Encontrado!")
+                        st.markdown(texto_resposta)
+                    else:
+                        st.error("A API respondeu, mas não retornou conteúdo válido.")
                 else:
-                    st.error("A IA não gerou uma resposta válida.")
+                    st.error(f"Erro na API ({response.status_code}): {response.text}")
                     
             except Exception as e:
-                st.error(f"Erro ao consultar a API: {e}")
+                st.error(f"Erro de conexão: {e}")
