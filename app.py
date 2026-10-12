@@ -36,8 +36,9 @@ st.markdown("""
 st.title("🚜 DiagMina AI")
 st.caption("⚡ Assistente Técnico de Manutenção - Tecnologia de Mina")
 
-# Leitura da chave de API armazenada nos Secrets do Streamlit
-api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
+# Leitura das chaves nos Secrets (suporta uma chave única ou lista separada por vírgulas)
+raw_keys = st.secrets.get("GEMINI_API_KEY", "")
+api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
@@ -49,14 +50,11 @@ with st.form("diag_form"):
 if submitted:
     if not sintoma and not codigo_erro:
         st.warning("⚠️ Preencha o código do erro ou a descrição da falha.")
-    elif not api_key:
+    elif not api_keys:
         st.error("❌ Chave GEMINI_API_KEY não configurada nos Secrets do Streamlit.")
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                # URL atualizado utilizando o modelo gemini-3.8-flash via REST
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
-                
                 prompt_texto = f"""
                 Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
                 
@@ -75,21 +73,30 @@ if submitted:
                         "parts": [{"text": prompt_texto}]
                     }]
                 }
-                
                 headers = {'Content-Type': 'application/json'}
                 
-                response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=30)
+                resposta_sucesso = None
+                ultimo_erro = ""
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    texto_resposta = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                    if texto_resposta:
-                        st.success("✅ Diagnóstico Encontrado!")
-                        st.markdown(texto_resposta)
+                # Tenta enviar a requisição alternando entre as chaves disponíveis
+                for current_key in api_keys:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={current_key}"
+                    response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=25)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        texto = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                        if texto:
+                            resposta_sucesso = texto
+                            break
                     else:
-                        st.error("A API respondeu, mas não retornou conteúdo válido.")
+                        ultimo_erro = f"Status {response.status_code}: {response.text}"
+                
+                if resposta_sucesso:
+                    st.success("✅ Diagnóstico Encontrado!")
+                    st.markdown(resposta_sucesso)
                 else:
-                    st.error(f"Erro na API ({response.status_code}): {response.text}")
+                    st.error(f"Erro ao consultar o modelo gratuito. Detalhes: {ultimo_erro}")
                     
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
