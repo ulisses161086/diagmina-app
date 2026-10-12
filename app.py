@@ -40,7 +40,7 @@ api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1043, CA-1029...").strip().upper()
+    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013, CA-1043...").strip().upper()
     codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX travado...").strip().upper()
     sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Não é possível realizar ações no PTX...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
@@ -53,7 +53,6 @@ if submitted:
     else:
         with st.spinner("🔎 Consultando base técnica de manutenção..."):
             try:
-                # Configura a chave na biblioteca clássica
                 genai.configure(api_key=api_key)
                 
                 prompt = f"""
@@ -69,17 +68,8 @@ if submitted:
                 2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: inspeção de chicotes, procedimento de reboot/reset físico, ressincronização com o Dispatch).
                 """
                 
-                # Descobre automaticamente o primeiro modelo compatível com geração de conteúdo disponível para a chave
-                modelo_escolhido = None
-                for m in genai.list_models():
-                    if 'generateContent' in m.supported_generation_methods:
-                        modelo_escolhido = m.name
-                        break
-                
-                if not modelo_escolhido:
-                    modelo_escolhido = 'gemini-1.5-flash'
-                
-                model = genai.GenerativeModel(modelo_escolhido)
+                # Utiliza rigorosamente o modelo exigido pela API no erro recente
+                model = genai.GenerativeModel('gemini-3.8-flash')
                 response = model.generate_content(prompt)
                 
                 if response and response.text:
