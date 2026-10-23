@@ -64,8 +64,8 @@ if submitted:
                 - Sintoma / Falha Relatada: {sintoma}
                 
                 DIRETRIZES DE RESPOSTA (Seja direto, técnico e focado em campo):
-                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de sinal GPS, falha no serviço Mine Compass/PTX, arquivo de rota ausente).
-                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: reboot do PTX, sincronização manual de mapas/rotas, verificação de antenas).
+                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de sinal GPS, falha no serviço Mine Compass/PTX, arquivo de rota ausente, cabo/conector danificado).
+                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: reboot do PTX, sincronização manual de mapas/rotas, verificação de antenas ou rádios Rajant).
                 """
                 
                 payload = {
@@ -78,9 +78,9 @@ if submitted:
                 resposta_sucesso = None
                 ultimo_erro = ""
                 
-                # Tenta enviar a requisição alternando entre as chaves disponíveis usando o modelo Gemini Flash correto
+                # Tenta enviar a requisição alternando entre as chaves usando a versão correta do modelo
                 for current_key in api_keys:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={current_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={current_key}"
                     response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=25)
                     
                     if response.status_code == 200:
