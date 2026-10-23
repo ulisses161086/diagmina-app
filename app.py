@@ -63,9 +63,9 @@ Forneça um diagnóstico rápido, direto e estruturado contendo:
 3. Validação pós-reparo.
 """
 
-        # Utiliza o gemini-1.5-flash por ser extremamente rápido e estável para evitar erros 503
+        # Utiliza o modelo genérico padrão suportado pelo novo SDK
         response = client.models.generate_content(
-            model="gemini-1.5-flash", contents=prompt
+            model="gemini-2.5-flash", contents=prompt
         )
 
         st.success("Diagnóstico Concluído:")
