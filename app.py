@@ -78,9 +78,9 @@ if submitted:
                 resposta_sucesso = None
                 ultimo_erro = ""
                 
-                # Tenta enviar a requisição alternando entre as chaves gratuitas disponíveis
+                # Tenta enviar a requisição alternando entre as chaves disponíveis usando o modelo Gemini Flash correto
                 for current_key in api_keys:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={current_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={current_key}"
                     response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=25)
                     
                     if response.status_code == 200:
