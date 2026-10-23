@@ -58,9 +58,9 @@ Forneça um diagnóstico técnico estruturado com:
 3. Precauções de segurança necessárias.
 """
 
-        # Utiliza o modelo atual suportado nativamente pelo SDK novo
+        # Utiliza o novo modelo recomendado pela API
         response = client.models.generate_content(
-            model="gemini-2.0-flash", contents=prompt
+            model="gemini-3.8-flash", contents=prompt
         )
 
         st.success("Diagnóstico Concluído:")
