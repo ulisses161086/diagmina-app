@@ -1,120 +1,79 @@
+import os
 import streamlit as st
-import requests
-import json
-import time
+from google import genai
+from google.genai import types
 
-# Configuração da página para celular
+# Configuração da página do Streamlit
 st.set_page_config(
-    page_title="DiagMina AI",
-    page_icon="🚜",
+    page_title="DiagMina AI - Consulta de Falha em Campo",
+    page_icon="🔍",
     layout="centered",
-    initial_sidebar_state="collapsed"
 )
 
-# Estilização profissional para o campo
-st.markdown("""
-    <style>
-    .stApp { background-color: #0b1329; color: #f8fafc; }
-    .stTextInput input, .stTextArea textarea {
-        background-color: #1e293b !important;
-        color: #ffffff !important;
-        border-radius: 10px !important;
-        border: 1px solid #334155 !important;
-    }
-    .stButton>button {
-        width: 100%;
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: #0f172a;
-        font-weight: bold;
-        font-size: 16px;
-        border-radius: 12px;
-        height: 3.2em;
-        border: none;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.title("🔍 Consulta de Falha em Campo")
+st.markdown(
+    "Insira os dados do equipamento para obter o diagnóstico baseado nos manuais."
+)
 
-st.title("🚜 DiagMina AI")
-st.caption("⚡ Assistente Técnico de Manutenção - Tecnologia de Mina")
+# Campos de entrada
+tag_equipamento = st.text_input(
+    "TAG / Frota do Equipamento:", placeholder="Ex: CA-1006"
+)
+codigo_erro = st.text_input(
+    "Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass"
+)
+descricao_falha = st.text_area(
+    "Descrição da Falha / Sintoma:", placeholder="Ex: Não exibe mapa no PTX"
+)
 
-# Leitura das chaves nos Secrets (suporta chaves separadas por vírgula)
-raw_keys = st.secrets.get("GEMINI_API_KEY", "")
-api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+# Chave da API (certifique-se de configurar nos Secrets do Streamlit)
+# No Streamlit Cloud, adicione GEMINI_API_KEY em st.secrets
+api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
-# Modelos homologados em ordem de fallback
-MODELOS = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash"
-]
+if st.button("✨ Buscar Diagnóstico"):
+  if not tag_equipamento or not descricao_falha:
+    st.warning(
+      "Por favor, preencha pelo menos a TAG do equipamento e a descrição da"
+      " falha."
+    )
+  elif not api_key:
+    st.error(
+      "Chave da API do Google não encontrada. Configure o secret 'GEMINI_API_KEY'."
+    )
+  else:
+    with st.spinner("A consultar manuais e a processar o diagnóstico..."):
+      try:
+        # Inicializa o cliente oficial do Google GenAI
+        client = genai.Client(api_key=api_key)
 
-with st.form("diag_form"):
-    st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1026...").strip().upper()
-    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Rota não aparece no mapa...", height=100)
-    submitted = st.form_submit_button("✨ Buscar Diagnóstico")
-
-if submitted:
-    if not sintoma and not codigo_erro:
-        st.warning("⚠️ Preencha o código do erro ou a descrição da falha.")
-    elif not api_keys:
-        st.error("❌ Chave GEMINI_API_KEY não configurada nos Secrets do Streamlit.")
-    else:
-        with st.spinner("🔎 Consultando base técnica de manutenção..."):
-            try:
-                prompt_texto = f"""
-                Você é o DiagMina AI, um assistente técnico especialista em manutenção preventiva e corretiva de frotas de mina (sistemas Dispatch, Provision, PTX, Câmeras, GPS, Rajant).
+        # Monta o prompt com os dados de campo
+        prompt = f"""
+                Atue como um especialista em manutenção de tecnologia de mineração.
+                Analise a seguinte ocorrência:
+                - TAG / Equipamento: {tag_equipamento}
+                - Código de Erro: {codigo_erro if codigo_erro else 'Não informado'}
+                - Sintoma / Descrição: {descricao_falha}
                 
-                DADOS DA OCORRÊNCIA EM CAMPO:
-                - TAG / Equipamento: {tag if tag else 'Não informada'}
-                - Código de Erro / Alarme: {codigo_erro if codigo_erro else 'Não informado'}
-                - Sintoma / Falha Relatada: {sintoma}
-                
-                DIRETRIZES DE RESPOSTA (Seja direto, técnico e focado em campo):
-                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de sinal GPS, falha no serviço Mine Compass/PTX, arquivo de rota ausente ou erro no software).
-                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: reboot do PTX, sincronização do banco de dados/mapa, reset via chave geral ou acionamento do suporte central).
+                Forneça um diagnóstico técnico estruturado com:
+                1. Possíveis causas raiz.
+                2. Procedimento passo a passo para resolução em campo.
+                3. Precauções de segurança necessárias.
                 """
-                
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": prompt_texto}]
-                    }]
-                }
-                headers = {'Content-Type': 'application/json'}
-                
-                resposta_sucesso = None
-                ultimo_erro = ""
-                
-                # Procura conexões intercalando modelos válidos e chaves registradas
-                for modelo in MODELOS:
-                    for current_key in api_keys:
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={current_key}"
-                        try:
-                            response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
-                            
-                            if response.status_code == 200:
-                                data = response.json()
-                                texto = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                                if texto:
-                                    resposta_sucesso = texto
-                                    break
-                            elif response.status_code in [503, 429]:
-                                ultimo_erro = f"Modelo {modelo} com alta demanda ({response.status_code}). Alternando..."
-                                time.sleep(0.5)
-                            else:
-                                ultimo_erro = f"Status {response.status_code} no modelo {modelo}: {response.text}"
-                        except Exception as req_err:
-                            ultimo_erro = str(req_err)
-                    
-                    if resposta_sucesso:
-                        break
-                
-                if resposta_sucesso:
-                    st.success("✅ Diagnóstico Encontrado!")
-                    st.markdown(resposta_sucesso)
-                else:
-                    st.error(f"Erro ao consultar a API. Detalhes: {ultimo_erro}")
-                    
-            except Exception as e:
-                st.error(f"Erro de conexão: {e}")
+
+        # Utiliza um modelo atual suportado (ex: gemini-2.0-flash ou geminti-1.5-pro)
+        # Configuramos também uma configuração de segurança ou parâmetros se necessário
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.2,  # Respostas mais objetivas e técnicas
+            ),
+        )
+
+        st.success("Diagnóstico Concluído:")
+        st.markdown(response.text)
+
+      except Exception as e:
+        st.error(
+            f"Erro ao consultar a API ou processar a requisição. Detalhes: {e}"
+        )
