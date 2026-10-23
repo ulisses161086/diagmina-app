@@ -1,7 +1,6 @@
 import os
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # Configuração da página do Streamlit
 st.set_page_config(
@@ -12,7 +11,8 @@ st.set_page_config(
 
 st.title("🔍 Consulta de Falha em Campo")
 st.markdown(
-    "Insira os dados do equipamento para obter o diagnóstico baseado nos manuais."
+    "Insira os dados do equipamento para obter o diagnóstico baseado nos"
+    " manuais."
 )
 
 # Campos de entrada
@@ -26,8 +26,7 @@ descricao_falha = st.text_area(
     "Descrição da Falha / Sintoma:", placeholder="Ex: Não exibe mapa no PTX"
 )
 
-# Chave da API (certifique-se de configurar nos Secrets do Streamlit)
-# No Streamlit Cloud, adicione GEMINI_API_KEY em st.secrets
+# Chave da API
 api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
 if st.button("✨ Buscar Diagnóstico"):
@@ -43,10 +42,12 @@ if st.button("✨ Buscar Diagnóstico"):
   else:
     with st.spinner("A consultar manuais e a processar o diagnóstico..."):
       try:
-        # Inicializa o cliente oficial do Google GenAI
-        client = genai.Client(api_key=api_key)
+        # Configura a API com a chave
+        genai.configure(api_key=api_key)
 
-        # Monta o prompt com os dados de campo
+        # Usa o modelo suportado atual
+        model = genai.GenerativeModel("gemini-1.5-pro")
+
         prompt = f"""
                 Atue como um especialista em manutenção de tecnologia de mineração.
                 Analise a seguinte ocorrência:
@@ -60,15 +61,7 @@ if st.button("✨ Buscar Diagnóstico"):
                 3. Precauções de segurança necessárias.
                 """
 
-        # Utiliza um modelo atual suportado (ex: gemini-2.0-flash ou geminti-1.5-pro)
-        # Configuramos também uma configuração de segurança ou parâmetros se necessário
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,  # Respostas mais objetivas e técnicas
-            ),
-        )
+        response = model.generate_content(prompt)
 
         st.success("Diagnóstico Concluído:")
         st.markdown(response.text)
