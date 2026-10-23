@@ -46,7 +46,6 @@ if st.button("✨ Buscar Diagnóstico"):
         genai.configure(api_key=api_key)
 
         # Usa o modelo suportado atual
-        # Opção A: Usar o flash atualizado
 model = genai.GenerativeModel('gemini-1.5-flash')
 
         prompt = f"""
