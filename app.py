@@ -1,6 +1,6 @@
 import os
+from google import genai
 import streamlit as st
-import google.generativeai as genai
 
 # Configuração da página do Streamlit
 st.set_page_config(
@@ -42,11 +42,8 @@ if st.button("✨ Buscar Diagnóstico"):
   else:
     with st.spinner("A consultar manuais e a processar o diagnóstico..."):
       try:
-        # Configura a API com a chave
-        genai.configure(api_key=api_key)
-
-        # Utiliza o modelo correto suportado
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # Inicializa o cliente oficial moderno
+        client = genai.Client(api_key=api_key)
 
         prompt = f"""
 Atue como um especialista em manutenção de tecnologia de mineração.
@@ -61,7 +58,10 @@ Forneça um diagnóstico técnico estruturado com:
 3. Precauções de segurança necessárias.
 """
 
-        response = model.generate_content(prompt)
+        # Utiliza o modelo atual suportado nativamente pelo SDK novo
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", contents=prompt
+        )
 
         st.success("Diagnóstico Concluído:")
         st.markdown(response.text)
