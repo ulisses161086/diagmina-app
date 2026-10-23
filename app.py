@@ -11,8 +11,7 @@ st.set_page_config(
 
 st.title("🔍 Consulta de Falha em Campo")
 st.markdown(
-    "Insira os dados do equipamento para obter o diagnóstico baseado nos"
-    " manuais."
+    "Insira os dados do equipamento para obter o diagnóstico técnico."
 )
 
 # Campos de entrada
@@ -41,31 +40,29 @@ if st.button("✨ Buscar Diagnóstico"):
       "Chave da API do Google não encontrada. Configure o secret 'GEMINI_API_KEY'."
     )
   else:
-    with st.spinner(
-        "A consultar manuais da frota e a processar o diagnóstico..."
-    ):
+    with st.spinner("A processar o diagnóstico em campo..."):
       try:
         # Inicializa o cliente oficial moderno
         client = genai.Client(api_key=api_key)
 
-        # Prompt estruturado para forçar respostas estritamente técnicas baseadas em manuais de mina
+        # Prompt estruturado técnico para manutenção de mineração
         prompt = f"""
-Você é o DiagMina AI, um assistente técnico especialista em manutenção de tecnologia de mineração (Frotas e Automação).
-Com base nos manuais técnicos oficiais de equipamentos de mina, analise a ocorrência abaixo:
+Você é o DiagMina AI, um assistente técnico especialista em manutenção de tecnologia de mineração.
+Analise a seguinte ocorrência com base em manuais e procedimentos padrão de frotas:
 
 - TAG / Equipamento: {tag_equipamento}
 - Código de Erro / Alarme: {codigo_erro if codigo_erro else 'Não informado'}
 - Sintoma / Descrição: {descricao_falha}
 
-Forneça um diagnóstico rápido, direto e estruturado contendo:
+Forneça um diagnóstico direto, rápido e estruturado contendo:
 1. Possíveis Causas Raiz (focadas em hardware, rede rádio/PTX ou SW embarcado).
 2. Procedimento Passo a Passo para Resolução em Campo.
 3. Validação pós-reparo.
 """
 
-        # Utiliza o modelo genérico padrão suportado pelo novo SDK
+        # Utiliza o modelo atual recomendado pela API para máxima velocidade e estabilidade
         response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=prompt
+            model="gemini-3.8-flash", contents=prompt
         )
 
         st.success("Diagnóstico Concluído:")
@@ -73,6 +70,5 @@ Forneça um diagnóstico rápido, direto e estruturado contendo:
 
       except Exception as e:
         st.error(
-            f"Erro ao consultar a API. O serviço pode estar temporariamente"
-            f" instável. Detalhes: {e}"
+            f"Erro ao consultar a API. O serviço pode estar instável. Detalhes: {e}"
         )
