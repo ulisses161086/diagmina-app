@@ -45,22 +45,21 @@ if st.button("✨ Buscar Diagnóstico"):
         # Configura a API com a chave
         genai.configure(api_key=api_key)
 
-        # Utiliza o modelo atual suportado
-                model = genai.GenerativeModel("gemini-pro")
-
+        # Utiliza o modelo genérico compatível
+        model = genai.GenerativeModel("gemini-pro")
 
         prompt = f"""
-                Atue como um especialista em manutenção de tecnologia de mineração.
-                Analise a seguinte ocorrência:
-                - TAG / Equipamento: {tag_equipamento}
-                - Código de Erro: {codigo_erro if codigo_erro else 'Não informado'}
-                - Sintoma / Descrição: {descricao_falha}
-                
-                Forneça um diagnóstico técnico estruturado com:
-                1. Possíveis causas raiz.
-                2. Procedimento passo a passo para resolução em campo.
-                3. Precauções de segurança necessárias.
-                """
+Atue como um especialista em manutenção de tecnologia de mineração.
+Analise a seguinte ocorrência:
+- TAG / Equipamento: {tag_equipamento}
+- Código de Erro: {codigo_erro if codigo_erro else 'Não informado'}
+- Sintoma / Descrição: {descricao_falha}
+
+Forneça um diagnóstico técnico estruturado com:
+1. Possíveis causas raiz.
+2. Procedimento passo a passo para resolução em campo.
+3. Precauções de segurança necessárias.
+"""
 
         response = model.generate_content(prompt)
 
