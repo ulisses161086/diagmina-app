@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import time
 
 # Configuração da página para celular
 st.set_page_config(
@@ -36,15 +37,23 @@ st.markdown("""
 st.title("🚜 DiagMina AI")
 st.caption("⚡ Assistente Técnico de Manutenção - Tecnologia de Mina")
 
-# Leitura das chaves nos Secrets (suporta chaves separadas por vírgula)
+# Leitura das chaves nos Secrets
 raw_keys = st.secrets.get("GEMINI_API_KEY", "")
 api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
 
+# Lista de modelos por ordem de preferência (Fallback)
+MODELOS = [
+    "gemini-2.5-flash",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro"
+]
+
 with st.form("diag_form"):
     st.subheader("🔍 Consulta de Falha em Campo")
-    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1013...").strip().upper()
-    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX off-line...").strip().upper()
-    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Falha na comunicação entre PTX e rádio Rajant...", height=100)
+    tag = st.text_input("TAG / Frota do Equipamento:", placeholder="Ex: CA-1043...").strip().upper()
+    codigo_erro = st.text_input("Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass...").strip().upper()
+    sintoma = st.text_area("Descrição da Falha / Sintoma:", placeholder="Ex: Rota não aparece no ecrã do PTX...", height=100)
     submitted = st.form_submit_button("✨ Buscar Diagnóstico")
 
 if submitted:
@@ -64,8 +73,8 @@ if submitted:
                 - Sintoma / Falha Relatada: {sintoma}
                 
                 DIRETRIZES DE RESPOSTA (Seja direto, técnico e focado em campo):
-                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de sinal GPS, falha no serviço Mine Compass/PTX, arquivo de rota ausente, cabo/conector danificado ou mau contato).
-                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: reboot do PTX, verificação de cabos Turck/RJ45, reset do rádio Rajant via BCCommander ou chave geral).
+                1. **Causa Raiz Provável**: Analise o problema considerando falhas comuns em campo (ex: perda de sinal GPS, travamento de software PTX, arquivo de rota/mapa dessincronizado, conector TNC ou cabo danificado).
+                2. **Checklist e Ações Corretivas**: Forneça o passo a passo objetivo para o técnico executar no equipamento (ex: comandos exec managesync/resync, reset via chave geral, verificação de conectores TNC/cabeamento ou acionamento do suporte Modular).
                 """
                 
                 payload = {
@@ -78,25 +87,37 @@ if submitted:
                 resposta_sucesso = None
                 ultimo_erro = ""
                 
-                # Tenta enviar a requisição alternando entre as chaves disponíveis usando gemini-3.8-flash
-                for current_key in api_keys:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={current_key}"
-                    response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=25)
+                # Loop duplo: Varre os modelos disponíveis e as chaves cadastradas
+                for modelo in MODELOS:
+                    for current_key in api_keys:
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={current_key}"
+                        
+                        try:
+                            response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
+                            
+                            if response.status_code == 200:
+                                data = response.json()
+                                texto = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                                if texto:
+                                    resposta_sucesso = texto
+                                    break
+                            elif response.status_code in [503, 429]:
+                                # Erro de alta demanda ou limite de taxa: tenta proximo modelo/chave
+                                ultimo_erro = f"Modelo {modelo} sobrecarregado (Status {response.status_code}). Alternando..."
+                                time.sleep(0.5)
+                            else:
+                                ultimo_erro = f"Status {response.status_code} no modelo {modelo}: {response.text}"
+                        except Exception as req_err:
+                            ultimo_erro = str(req_err)
                     
-                    if response.status_code == 200:
-                        data = response.json()
-                        texto = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                        if texto:
-                            resposta_sucesso = texto
-                            break
-                    else:
-                        ultimo_erro = f"Status {response.status_code}: {response.text}"
+                    if resposta_sucesso:
+                        break
                 
                 if resposta_sucesso:
                     st.success("✅ Diagnóstico Encontrado!")
                     st.markdown(resposta_sucesso)
                 else:
-                    st.error(f"Erro ao consultar a API. Detalhes: {ultimo_erro}")
+                    st.error(f"Erro ao consultar a API. Tente novamente em instantes. Detalhes: {ultimo_erro}")
                     
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
