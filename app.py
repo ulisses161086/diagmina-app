@@ -20,10 +20,11 @@ tag_equipamento = st.text_input(
     "TAG / Frota do Equipamento:", placeholder="Ex: CA-1006"
 )
 codigo_erro = st.text_input(
-    "Código de Erro / Alarme (Opcional):", placeholder="Ex: Falha no Mine Compass"
+    "Código de Erro / Alarme (Opcional):", placeholder="Ex: PTX travado"
 )
 descricao_falha = st.text_area(
-    "Descrição da Falha / Sintoma:", placeholder="Ex: Não exibe mapa no PTX"
+    "Descrição da Falha / Sintoma:",
+    placeholder="Ex: Não consegue realizar ações no PTX",
 )
 
 # Chave da API
@@ -40,27 +41,31 @@ if st.button("✨ Buscar Diagnóstico"):
       "Chave da API do Google não encontrada. Configure o secret 'GEMINI_API_KEY'."
     )
   else:
-    with st.spinner("A consultar manuais e a processar o diagnóstico..."):
+    with st.spinner(
+        "A consultar manuais da frota e a processar o diagnóstico..."
+    ):
       try:
         # Inicializa o cliente oficial moderno
         client = genai.Client(api_key=api_key)
 
+        # Prompt estruturado para forçar respostas estritamente técnicas baseadas em manuais de mina
         prompt = f"""
-Atue como um especialista em manutenção de tecnologia de mineração.
-Analise a seguinte ocorrência:
+Você é o DiagMina AI, um assistente técnico especialista em manutenção de tecnologia de mineração (Frotas e Automação).
+Com base nos manuais técnicos oficiais de equipamentos de mina, analise a ocorrência abaixo:
+
 - TAG / Equipamento: {tag_equipamento}
-- Código de Erro: {codigo_erro if codigo_erro else 'Não informado'}
+- Código de Erro / Alarme: {codigo_erro if codigo_erro else 'Não informado'}
 - Sintoma / Descrição: {descricao_falha}
 
-Forneça um diagnóstico técnico estruturado com:
-1. Possíveis causas raiz.
-2. Procedimento passo a passo para resolução em campo.
-3. Precauções de segurança necessárias.
+Forneça um diagnóstico rápido, direto e estruturado contendo:
+1. Possíveis Causas Raiz (focadas em hardware, rede rádio/PTX ou SW embarcado).
+2. Procedimento Passo a Passo para Resolução em Campo.
+3. Validação pós-reparo.
 """
 
-        # Utiliza o novo modelo recomendado pela API
+        # Utiliza o gemini-1.5-flash por ser extremamente rápido e estável para evitar erros 503
         response = client.models.generate_content(
-            model="gemini-3.8-flash", contents=prompt
+            model="gemini-1.5-flash", contents=prompt
         )
 
         st.success("Diagnóstico Concluído:")
@@ -68,5 +73,6 @@ Forneça um diagnóstico técnico estruturado com:
 
       except Exception as e:
         st.error(
-            f"Erro ao consultar a API ou processar a requisição. Detalhes: {e}"
+            f"Erro ao consultar a API. O serviço pode estar temporariamente"
+            f" instável. Detalhes: {e}"
         )
