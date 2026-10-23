@@ -46,7 +46,8 @@ if st.button("✨ Buscar Diagnóstico"):
         genai.configure(api_key=api_key)
 
         # Usa o modelo suportado atual
-        model = genai.GenerativeModel("gemini-1.5-pro")
+        # Opção A: Usar o flash atualizado
+model = genai.GenerativeModel('gemini-1.5-flash')
 
         prompt = f"""
                 Atue como um especialista em manutenção de tecnologia de mineração.
