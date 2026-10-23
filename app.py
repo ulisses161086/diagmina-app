@@ -45,8 +45,8 @@ if st.button("✨ Buscar Diagnóstico"):
         # Configura a API com a chave
         genai.configure(api_key=api_key)
 
-        # Usa o modelo suportado atual
-model = genai.GenerativeModel('gemini-1.5-flash')
+        # Utiliza o modelo atual suportado
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
         prompt = f"""
                 Atue como um especialista em manutenção de tecnologia de mineração.
